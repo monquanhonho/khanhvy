@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>sinhnhat</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: black;
+        }
+        
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="matrix"></canvas>
+    <script>
+        const canvas = document.getElementById("matrix");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        // Matrix Rain Variables
+        const fontSize = 18;
+        const chars = "HAPPYBIRTHDAY";
+        let columns = Math.floor(canvas.width / fontSize);
+        let drops = Array(columns).fill(1);
+
+        // Countdown Variables
+        let particles = [];
+        let currentStage = 3;
+        let countdownInterval;
+        let showFinalMessage = false;
+        let redirectTimeout;
+
+        // Handle resize
+        window.addEventListener("resize", () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            columns = Math.floor(canvas.width / fontSize);
+            drops = Array(columns).fill(1);
+        });
+
+        // Draw Matrix Rain with glow effect
+        function drawMatrix() {
+            ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.font = `${fontSize}px monospace`;
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars.charAt(Math.floor(Math.random() * chars.length));
+                const x = i * fontSize;
+                const y = drops[i] * fontSize;
+
+                // Glow effect for head character
+                ctx.shadowColor = "white";
+                ctx.shadowBlur = 10;
+                ctx.fillStyle = "#E6E6FA";
+                ctx.fillText(text, x, y);
+
+                // Trail text without glow
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = "rgba(221, 160, 221, 0.5)";
+                if (y > fontSize) ctx.fillText(text, x, y - fontSize);
+
+                if (y > canvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+
+                drops[i]++;
+            }
+        }
+
+        // Create text particles (number or message)
+        function getTextPoints(text, callback) {
+            const tempCanvas = document.createElement("canvas");
+            const tempCtx = tempCanvas.getContext("2d");
+            tempCanvas.width = 800;
+            tempCanvas.height = 250;
+
+            tempCtx.fillStyle = "black";
+            tempCtx.fillRect(0, 0, 800, 250);
+            const fontSize = text.length > 1 ? (text === "Chúc Mừng Sinh Nhật" ? 60 : 40) : 160;
+            tempCtx.font = `bold ${fontSize}px sans-serif`;
+            tempCtx.fillStyle = "white";
+            tempCtx.textAlign = "center";
+            tempCtx.textBaseline = "middle";
+            tempCtx.fillText(text, 400, 125);
+
+            const imageData = tempCtx.getImageData(0, 0, 800, 250).data;
+            const points = [];
+
+            for (let y = 0; y < 250; y += 5) {
+                for (let x = 0; x < 800; x += 5) {
+                    const index = (y * 800 + x) * 4;
+                    if (imageData[index] > 128) {
+                        points.push({
+                            x: x + canvas.width / 2 - 400,
+                            y: y + canvas.height / 2 - 125,
+                            vx: 0,
+                            vy: 0
+                        });
+                    }
+                }
+            }
+            callback(points);
+        }
+
+        function spawnParticles(points) {
+            particles = points.map(p => ({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                tx: p.x,
+                ty: p.y,
+                vx: 0,
+                vy: 0
+            }));
+        }
+
+        function updateParticles() {
+            particles.forEach(p => {
+                let dx = p.tx - p.x;
+                let dy = p.ty - p.y;
+                p.vx += dx * 0.003;
+                p.vy += dy * 0.003;
+                p.vx *= 0.88;
+                p.vy *= 0.88;
+                p.x += p.vx;
+                p.y += p.vy;
+            });
+        }
+
+        function drawParticles() {
+            ctx.fillStyle = "rgba(255,182,193,0.9)";
+            particles.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 1.8, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+        }
+
+        function nextStage() {
+            if (currentStage > 0) {
+                getTextPoints(currentStage.toString(), pts => {
+                    spawnParticles(pts);
+                    currentStage--;
+                });
+            } else if (!showFinalMessage) {
+                getTextPoints("Chúc Mừng Sinh Nhật", pts => {
+                    spawnParticles(pts);
+                    showFinalMessage = true;
+                    clearInterval(countdownInterval);
+
+                    // Chuyển sang trang mới sau 3 giây
+                    redirectTimeout = setTimeout(() => {
+                        window.location.href = "monqua.html";
+                    }, 4000);
+                });
+            }
+        }
+
+        function animate() {
+            drawMatrix();
+            if (particles.length > 0) {
+                drawParticles();
+                updateParticles();
+            }
+            requestAnimationFrame(animate);
+        }
+
+        // Start
+        nextStage();
+        countdownInterval = setInterval(nextStage, 3500);
+        animate();
+    </script>
+</body>
+
+</html>
